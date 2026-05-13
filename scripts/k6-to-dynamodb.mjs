@@ -2,19 +2,20 @@ import { readFileSync } from 'fs';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 
-const ENDPOINT = process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000';
-const REGION   = process.env.AWS_REGION         || 'us-east-1';
-const RUN_ID   = process.env.RUN_ID             || 'run-local';
-const SUMMARY  = process.env.SUMMARY_PATH       || '/app/out/summary.json';
+const REGION  = process.env.AWS_REGION   || 'us-east-1';
+const RUN_ID  = process.env.RUN_ID       || 'run-local';
+const SUMMARY = process.env.SUMMARY_PATH || '/app/out/summary.json';
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({
-  endpoint: ENDPOINT,
-  region: REGION,
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID     || 'local',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
-  },
-}));
+const clientConfig = { region: REGION };
+if (process.env.DYNAMODB_ENDPOINT) clientConfig.endpoint = process.env.DYNAMODB_ENDPOINT;
+if (process.env.AWS_ACCESS_KEY_ID) {
+  clientConfig.credentials = {
+    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  };
+}
+
+const client = DynamoDBDocumentClient.from(new DynamoDBClient(clientConfig));
 
 let summary;
 try {

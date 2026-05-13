@@ -5,14 +5,15 @@ import { DynamoDBDocumentClient, ScanCommand, QueryCommand } from '@aws-sdk/lib-
 const app = express();
 const port = process.env.PORT || 4000;
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({
-  endpoint: process.env.DYNAMODB_ENDPOINT,
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+const clientConfig = { region: process.env.AWS_REGION || 'us-east-1' };
+if (process.env.DYNAMODB_ENDPOINT) clientConfig.endpoint = process.env.DYNAMODB_ENDPOINT;
+if (process.env.AWS_ACCESS_KEY_ID) {
+  clientConfig.credentials = {
+    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-}));
+  };
+}
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient(clientConfig));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
