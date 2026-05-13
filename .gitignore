@@ -1,0 +1,9 @@
+node_modules/
+.env
+out/*
+!out/.gitkeep
+results.json
+summary.json
+*.log
+.DS_Store
+api-gateway/node_modules/

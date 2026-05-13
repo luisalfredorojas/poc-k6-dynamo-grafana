@@ -1,0 +1,438 @@
+{
+  "__inputs": [],
+  "__elements": {},
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "yesoreyeram-infinity-datasource", "name": "Infinity", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Catálogo histórico de corridas k6 leído desde DynamoDB vía api-gateway",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" } } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "http_req_duration_p95" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              { "id": "displayName", "value": "p95 (ms)" },
+              { "id": "thresholds", "value": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "yellow", "value": 500 },
+                  { "color": "red",    "value": 800 }
+                ]
+              }},
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "http_req_duration_p99" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              { "id": "displayName", "value": "p99 (ms)" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "http_req_failed_rate" },
+            "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "displayName", "value": "Failed Rate" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "errors_rate" },
+            "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "displayName", "value": "Error Rate" },
+              { "id": "thresholds", "value": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "yellow", "value": 0.01 },
+                  { "color": "red",    "value": 0.05 }
+                ]
+              }},
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "http_reqs" },
+            "properties": [
+              { "id": "displayName", "value": "HTTP Reqs" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "vus_max" },
+            "properties": [
+              { "id": "displayName", "value": "VUs Max" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "started_at" },
+            "properties": [
+              { "id": "displayName", "value": "Fecha" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "run_id" },
+            "properties": [
+              { "id": "displayName", "value": "Run ID" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "test_name" },
+            "properties": [
+              { "id": "displayName", "value": "Test" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "environment" },
+            "properties": [
+              { "id": "displayName", "value": "Entorno" }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Fecha" }]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/runs?limit=100",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "run_id",                  "text": "run_id",                  "type": "string" },
+            { "selector": "started_at",              "text": "started_at",              "type": "string" },
+            { "selector": "test_name",               "text": "test_name",               "type": "string" },
+            { "selector": "environment",             "text": "environment",             "type": "string" },
+            { "selector": "vus_max",                 "text": "vus_max",                 "type": "number" },
+            { "selector": "http_reqs",               "text": "http_reqs",               "type": "number" },
+            { "selector": "http_req_failed_rate",    "text": "http_req_failed_rate",    "type": "number" },
+            { "selector": "http_req_duration_p95",   "text": "http_req_duration_p95",   "type": "number" },
+            { "selector": "http_req_duration_p99",   "text": "http_req_duration_p99",   "type": "number" },
+            { "selector": "errors_rate",             "text": "errors_rate",             "type": "number" }
+          ]
+        }
+      ],
+      "title": "Historial de corridas",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "run_id": 0,
+              "started_at": 1,
+              "test_name": 2,
+              "environment": 3,
+              "vus_max": 4,
+              "http_reqs": 5,
+              "http_req_failed_rate": 6,
+              "http_req_duration_p95": 7,
+              "http_req_duration_p99": 8,
+              "errors_rate": 9
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+      "id": 2,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto",
+        "reduceOptions": { "calcs": ["count"], "fields": "run_id", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/runs?limit=1000",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "run_id", "text": "run_id", "type": "string" }
+          ]
+        }
+      ],
+      "title": "Total de corridas registradas",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 500 },
+            { "color": "red",    "value": 800 }
+          ]},
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto",
+        "reduceOptions": { "calcs": ["mean"], "fields": "http_req_duration_p95", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/runs?limit=1000",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "http_req_duration_p95", "text": "http_req_duration_p95", "type": "number" }
+          ]
+        }
+      ],
+      "title": "p95 mediana del historial",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" } },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 8 },
+      "id": 4,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.6,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "orientation": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 200
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/runs?limit=1000",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "test_name", "text": "test_name", "type": "string" },
+            { "selector": "run_id",    "text": "run_id",    "type": "string" }
+          ]
+        }
+      ],
+      "title": "Corridas por test_name",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "test_name": { "aggregations": [],       "operation": "groupby" },
+              "run_id":    { "aggregations": ["count"], "operation": "aggregate" }
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "red",    "value": 1 }
+          ]},
+          "unit": "short",
+          "displayName": "Thresholds fallidos"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 8 },
+      "id": 5,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto",
+        "reduceOptions": { "calcs": ["sum"], "fields": "passed_failed", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/thresholds/all",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "run_id",  "text": "run_id",  "type": "string" },
+            { "selector": "passed",  "text": "passed",  "type": "boolean" }
+          ]
+        }
+      ],
+      "title": "Última corrida — Thresholds fallidos",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [{ "config": { "id": "equal", "options": { "value": false } }, "fieldName": "passed" }],
+            "match": "any",
+            "type": "include"
+          }
+        },
+        {
+          "id": "addField",
+          "options": { "alias": "passed_failed", "mode": "reduceRow",
+            "reduce": { "reducer": "count" }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" } } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "passed" },
+            "properties": [
+              { "id": "displayName", "value": "Passed" },
+              { "id": "thresholds", "value": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red",   "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }},
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "true":  { "text": "✓ PASS", "color": "green", "index": 0 } } },
+                { "type": "value", "options": { "false": { "text": "✗ FAIL", "color": "red",   "index": 1 } } }
+              ]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "metric" },
+            "properties": [{ "id": "displayName", "value": "Métrica" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "expression" },
+            "properties": [{ "id": "displayName", "value": "Expresión" }]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/thresholds?run_id=${run_id}",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "metric",     "text": "metric",     "type": "string" },
+            { "selector": "expression", "text": "expression", "type": "string" },
+            { "selector": "passed",     "text": "passed",     "type": "boolean" }
+          ]
+        }
+      ],
+      "title": "Thresholds del run_id seleccionado",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["k6", "dynamodb", "catalog"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "dynamodb-gateway" },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "run_id",
+        "options": [],
+        "query": {
+          "type": "json",
+          "source": "url",
+          "url": "http://api-gateway:4000/runs?limit=100",
+          "url_options": { "method": "GET", "data": "" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "run_id", "text": "run_id", "type": "string" }
+          ]
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 5,
+        "type": "query",
+        "label": "Run ID"
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Runs Catalog",
+  "uid": "k6-runs-catalog",
+  "version": 1
+}

@@ -1,0 +1,19 @@
+{
+  "name": "k6-poc2-dynamo-en-grafana",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "init-db": "docker compose --profile init run --rm init-db",
+    "test": "docker compose --profile run run --rm -e RUN_ID=$RUN_ID k6",
+    "ingest": "docker compose --profile run run --rm -e RUN_ID=$RUN_ID ingest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.620.0",
+    "@aws-sdk/lib-dynamodb": "^3.620.0",
+    "@aws-sdk/util-dynamodb": "^3.620.0"
+  }
+}

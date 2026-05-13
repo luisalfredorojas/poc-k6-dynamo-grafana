@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: DynamoDB-Gateway
+    uid: dynamodb-gateway
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    isDefault: false
+    editable: true
+    jsonData:
+      auth_method: none
+      global_queries: []
+      allowedHosts:
+        - http://api-gateway:4000

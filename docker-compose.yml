@@ -1,0 +1,184 @@
+services:
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:${DYNAMODB_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-dynamodb-local
+    user: root
+    ports:
+      - "${DYNAMODB_PORT:-8000}:8000"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - poc
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:${DYNAMODB_ADMIN_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-dynamodb-admin
+    ports:
+      - "${DYNAMODB_ADMIN_PORT:-8001}:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    networks:
+      - poc
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-remote-write-receiver
+      - --enable-feature=native-histograms
+      - --web.enable-lifecycle
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - poc
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-api-gateway
+    ports:
+      - "${API_GATEWAY_PORT:-4000}:4000"
+    environment:
+      PORT: 4000
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - poc
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+      start_period: 60s
+    networks:
+      - poc
+
+  init-db:
+    image: amazon/aws-cli:${AWS_CLI_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-init-db
+    volumes:
+      - ./scripts:/scripts:ro
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+    entrypoint: ["/bin/bash", "/scripts/init-dynamodb.sh"]
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    profiles:
+      - init
+    networks:
+      - poc
+
+  k6:
+    image: grafana/k6:${K6_IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-k6
+    volumes:
+      - ./k6:/scripts:ro
+      - ./out:/out
+    environment:
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM: "true"
+      RUN_ID: ${RUN_ID:-run-local}
+    command: run -o experimental-prometheus-rw --tag testid=${RUN_ID:-run-local} /scripts/load-test.js
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    profiles:
+      - run
+    networks:
+      - poc
+
+  ingest:
+    image: node:${NODE_IMAGE_TAG:-20-alpine}
+    container_name: ${COMPOSE_PROJECT_NAME:-k6poc}-ingest
+    working_dir: /app
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./out:/app/out:ro
+      - ./package.json:/app/package.json:ro
+      - npm-cache:/root/.npm
+    environment:
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
+      RUN_ID: ${RUN_ID:-run-local}
+      SUMMARY_PATH: /app/out/summary.json
+    command: ["sh", "-c", "npm install --prefer-offline && node /app/scripts/k6-to-dynamodb.mjs"]
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    profiles:
+      - run
+    networks:
+      - poc
+
+volumes:
+  dynamodb-data:
+  prometheus-data:
+  grafana-data:
+  npm-cache:
+
+networks:
+  poc:
+    name: ${COMPOSE_PROJECT_NAME:-k6poc}-net
