@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "K6GatewayReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/k6_test_runs",
+        "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/k6_thresholds"
+      ]
+    }
+  ]
+}
